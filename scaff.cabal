@@ -25,6 +25,7 @@ executable scaff
   build-depends: base >=4.7 && <5
                , aeson
                , bytestring
+               , casing
                , directory
                , filepath
                , ginger
@@ -34,4 +35,5 @@ executable scaff
                , unordered-containers
                , yaml
   other-modules: Scaff.Mapping
+               , Scaff.Context
   default-language: Haskell2010

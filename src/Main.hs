@@ -11,7 +11,6 @@ import qualified Data.Yaml as YAML
 import qualified Data.Aeson as JSON
 import Data.Aeson (toJSON)
 import System.FilePath
-import Scaff.Mapping (Mapping, runMapping)
 import Data.HashMap.Lazy (HashMap)
 import qualified Data.HashMap.Lazy as HashMap
 import System.Environment
@@ -23,16 +22,15 @@ import Data.Maybe
 import Data.Bool
 import System.Directory
 import Data.Monoid
+import Text.Casing
+import Data.List
 
+import Scaff.Context
 import Scaff.Mapping
 
 loadYaml :: JSON.FromJSON a => IO a
 loadYaml =
   YAML.decodeEither' <$> BS.getContents >>= either (error . show) pure 
-
-loadYamlFile :: JSON.FromJSON a => FilePath -> IO a
-loadYamlFile fn =
-  YAML.decodeFileEither fn >>= either (error . show) pure 
 
 parseMapping :: String -> Maybe Mapping
 parseMapping input = do
@@ -60,18 +58,11 @@ parseArgs [fn, project, dstDir] = do
 parseArgs [fn, project] = parseArgs [fn, project, "." </> project]
 parseArgs _ =
   error "Usage: scaff TEMPLATE PROJECT-NAME"
-  
 
 main :: IO ()
 main = do
-  home <- getEnv "HOME"
-  context0 :: HashMap Text JSON.Value <- loadYamlFile (home </> ".scaff/config.yaml")
-  environment <- HashMap.fromList . map (fmap toJSON) <$> getEnvironment
   args <- getArgs
   (project, templateDir, mappingFn, dstDir) <- parseArgs args
-  let vars = [ ("project", toJSON project)
-             , ("env", toJSON environment)
-             ]
-  let context = context0 <> HashMap.fromList vars
+  context <- getContext project
   mappings <- map (fmap (dstDir </>)) . catMaybes . map parseMapping . lines <$> readFile mappingFn
   mapM_ (runMapping templateDir context) mappings

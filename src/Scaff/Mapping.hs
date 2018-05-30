@@ -18,6 +18,8 @@ import Text.Printf
 import Control.Monad.Writer
 import Control.Exception
 
+import Scaff.Context
+
 data MappingOf a =
   Mapping
     { template :: FilePath
@@ -28,8 +30,6 @@ data MappingOf a =
 type Mapping = MappingOf FilePath
 
 type Mappings = [Mapping]
-
-type Context = HashMap Text Value
 
 type RunPure = Run SourcePos (Writer Text) Text
 
