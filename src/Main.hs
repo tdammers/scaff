@@ -7,12 +7,7 @@ where
 
 import Control.Monad
 import Control.Applicative
-import qualified Data.Yaml as YAML
-import qualified Data.Aeson as JSON
-import Data.Aeson (toJSON)
 import System.FilePath
-import Data.HashMap.Lazy (HashMap)
-import qualified Data.HashMap.Lazy as HashMap
 import System.Environment
 import qualified Data.ByteString as BS
 import Data.Text (Text)
@@ -27,10 +22,7 @@ import Data.List
 
 import Scaff.Context
 import Scaff.Mapping
-
-loadYaml :: JSON.FromJSON a => IO a
-loadYaml =
-  YAML.decodeEither' <$> BS.getContents >>= either (error . show) pure 
+import Scaff.Ginger
 
 parseMapping :: String -> Maybe Mapping
 parseMapping input = do
@@ -64,5 +56,10 @@ main = do
   args <- getArgs
   (project, templateDir, mappingFn, dstDir) <- parseArgs args
   context <- getContext project
-  mappings <- map (fmap (dstDir </>)) . catMaybes . map parseMapping . lines <$> readFile mappingFn
+  mappings <- map (fmap (dstDir </>))
+                . catMaybes
+                . map parseMapping
+                . lines
+                . Text.unpack
+                <$> (gingerPure context =<< readFile mappingFn)
   mapM_ (runMapping templateDir context) mappings

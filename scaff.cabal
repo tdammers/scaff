@@ -36,4 +36,5 @@ executable scaff
                , yaml
   other-modules: Scaff.Mapping
                , Scaff.Context
+               , Scaff.Ginger
   default-language: Haskell2010

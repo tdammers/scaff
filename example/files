@@ -1,7 +1,8 @@
+{% set license = license|default('BSD3') %}
 .gitignore
 stack.yaml
 project.cabal:{{project}}.cabal
 src/Main.hs:src/Main.hs
 README.md
 Setup.hs
-licenses/{{license|default('BSD3')}}:LICENSE
+licenses/{{license}}:LICENSE
