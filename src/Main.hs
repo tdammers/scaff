@@ -21,6 +21,7 @@ import Text.Casing
 import Data.List
 
 import Scaff.Context
+import Scaff.Config
 import Scaff.Mapping
 import Scaff.Ginger
 
@@ -38,24 +39,23 @@ parseMapping input = do
   else
     Just (Mapping src dst)
 
-parseArgs :: [String] -> IO (String, String, String, String)
+parseArgs :: [String] -> IO (String, String, String)
 parseArgs [fn, project, dstDir] = do
-  isdir <- doesDirectoryExist fn
-  let (templateDir, fn') =
-        if isdir then
-          (fn, fn </> "files")
-        else
-          (takeDirectory fn, fn)
-  return (project, templateDir, fn', dstDir)
-parseArgs [fn, project] = parseArgs [fn, project, "." </> project]
+  return (project, fn, dstDir)
+parseArgs [fn, project] =
+  parseArgs [fn, project, "." </> project]
 parseArgs _ =
   error "Usage: scaff TEMPLATE PROJECT-NAME"
 
 main :: IO ()
 main = do
   args <- getArgs
-  (project, templateDir, mappingFn, dstDir) <- parseArgs args
-  context <- getContext project
+  (project, templateName, dstDir) <- parseArgs args
+  config <- loadConfig
+  templateDir <- maybe (error $ "template not found: " ++ templateName) pure
+                  =<< findTemplate templateName (templateRepos config)
+  context <- getContext project (configVars config)
+  let mappingFn = templateDir </> "files"
   mappings <- map (fmap (dstDir </>))
                 . catMaybes
                 . map parseMapping

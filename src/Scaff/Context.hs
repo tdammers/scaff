@@ -17,17 +17,15 @@ import Data.Monoid
 import System.FilePath
 import System.Directory
 import Text.Casing
-
-loadYamlFile :: JSON.FromJSON a => FilePath -> IO a
-loadYamlFile fn =
-  YAML.decodeFileEither fn >>= either (error . show) pure 
+import Data.Maybe
 
 type Context = HashMap Text JSON.Value
 
-getContext :: String -> IO Context
-getContext project = do
-  home <- getEnv "HOME"
-  context0 :: HashMap Text JSON.Value <- loadYamlFile (home </> ".scaff/config.yaml")
+contextLookup :: Text -> Context -> JSON.Value
+contextLookup key context = fromMaybe JSON.Null $ HashMap.lookup key context
+
+getContext :: String -> Context -> IO Context
+getContext project config = do
   environment <- map (\(k, v) -> (Text.pack k, toJSON v)) <$> getEnvironment
   let environmentAll =
         HashMap.fromList environment
@@ -41,5 +39,6 @@ getContext project = do
       cleanupEnvKey = Text.pack . kebab . Text.unpack . Text.drop 6
   let vars = [ ("project", toJSON project)
              , ("env", toJSON environmentAll)
+             , ("author", contextLookup "author" config)
              ]
-  return $ context0  <> environmentOurs <> HashMap.fromList vars
+  return $ environmentOurs <> HashMap.fromList vars

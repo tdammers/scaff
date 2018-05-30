@@ -35,6 +35,7 @@ executable scaff
                , unordered-containers
                , yaml
   other-modules: Scaff.Mapping
+               , Scaff.Config
                , Scaff.Context
                , Scaff.Ginger
   default-language: Haskell2010
