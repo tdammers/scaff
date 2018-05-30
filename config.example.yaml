@@ -1,0 +1,6 @@
+# Copy this file into ~/.scaff/config.yaml and edit to taste.
+author:
+  name: Your name
+  email: yourname@example.com
+  copyright-year: 2018
+  github: yourname
