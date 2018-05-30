@@ -22,6 +22,7 @@ import Data.List
 
 import Scaff.Context
 import Scaff.Config
+import Scaff.TemplateRepo
 import Scaff.Mapping
 import Scaff.Ginger
 

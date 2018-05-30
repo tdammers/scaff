@@ -28,6 +28,7 @@ import Data.List
 
 import Scaff.Context
 import Scaff.Mapping
+import Scaff.TemplateRepo
 
 loadYamlFile :: JSON.FromJSON a => FilePath -> IO a
 loadYamlFile fn =
@@ -41,35 +42,11 @@ loadOptionalYamlFile def fn = do
   else
     return def
 
-data TemplateRepo
-  = LocalRepo FilePath
-
 data Config
   = Config
       { configVars :: Context
       , templateRepos :: [TemplateRepo]
       }
-
-collectRepos :: FilePath -> IO [TemplateRepo]
-collectRepos fn = do
-  exists <- doesFileExist fn
-  if exists then
-    catMaybes . map parseRepoLine . lines <$> readFile fn
-  else do
-    return []
-
-parseRepoLine :: String -> Maybe TemplateRepo
-parseRepoLine str =
-  case tyName of
-    "local" -> Just (LocalRepo arg)
-    x -> Nothing
-  where
-    strWithoutComments = takeWhile (/= '#') str
-    tyName = takeWhile (not . isSpace) strWithoutComments
-    arg = dropWhileEnd isSpace
-            . dropWhile isSpace
-            . dropWhile (not . isSpace)
-            $ strWithoutComments
 
 loadConfig :: IO Config
 loadConfig = do
@@ -81,39 +58,9 @@ loadConfig = do
         ] :: [FilePath]
   vars <- mconcat <$> mapM (loadOptionalYamlFile HashMap.empty) yamlFiles
 
-  repoLists <- do
-    let mainRepoFile = home </> ".scaff/repos.list"
-    otherRepoFiles <-
-      (listDirectory $ home </> ".scaff/repos.list.d")
-      `catch`
-      (\err -> if isDoesNotExistError err then
-                 return []
-               else
-                 throw err
-      )
-    return $ mainRepoFile:otherRepoFiles
-
-  repos <- ((LocalRepo ".") :) . concat <$> mapM collectRepos repoLists
+  repos <- listRepos
 
   return Config
     { configVars = vars
     , templateRepos = repos
     }
-
-findTemplate :: String -> [TemplateRepo] -> IO (Maybe FilePath)
-findTemplate templateName [] = pure Nothing
-findTemplate templateName (repo:repos) = do
-  foundMay <- findTemplateIn templateName repo
-  case foundMay of
-    Nothing -> findTemplate templateName repos
-    x -> pure x
-
-findTemplateIn :: String -> TemplateRepo -> IO (Maybe FilePath)
-findTemplateIn templateName (LocalRepo dirname) = do
-  let templateDir = dirname </> templateName
-      fullPath = templateDir </> "files"
-  exists <- doesFileExist fullPath
-  if exists then
-    pure . Just $ templateDir
-  else
-    pure Nothing
