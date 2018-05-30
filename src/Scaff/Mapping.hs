@@ -17,6 +17,7 @@ import System.Directory
 import Text.Printf
 import Control.Monad.Writer
 import Control.Exception
+import Data.Char
 
 import Scaff.Context
 import Scaff.Ginger (gingerPure, gingerFileIO)
@@ -39,3 +40,18 @@ runMapping templateRootDir context mapping = do
   printf "%s\n" dstFn
   createDirectoryIfMissing True (takeDirectory dstFn)
   gingerFileIO context srcFn dstFn
+
+parseMapping :: String -> Maybe Mapping
+parseMapping input = do
+  -- TODO: better parser
+  let src = takeWhile (not . isSpace) . dropWhile isSpace . takeWhile (/= ':') $ input
+      rem = drop 1 . dropWhile (/= ':') $ input
+      dst = dropWhile isSpace $ rem
+  if null dst then
+    if null src then
+      Nothing
+    else
+      Just (Mapping src src)
+  else
+    Just (Mapping src dst)
+

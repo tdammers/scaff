@@ -25,20 +25,6 @@ import Scaff.Config
 import Scaff.Mapping
 import Scaff.Ginger
 
-parseMapping :: String -> Maybe Mapping
-parseMapping input = do
-  -- TODO: better parser
-  let src = takeWhile (not . isSpace) . dropWhile isSpace . takeWhile (/= ':') $ input
-      rem = drop 1 . dropWhile (/= ':') $ input
-      dst = dropWhile isSpace $ rem
-  if null dst then
-    if null src then
-      Nothing
-    else
-      Just (Mapping src src)
-  else
-    Just (Mapping src dst)
-
 parseArgs :: [String] -> IO (String, String, String)
 parseArgs [fn, project, dstDir] = do
   return (project, fn, dstDir)

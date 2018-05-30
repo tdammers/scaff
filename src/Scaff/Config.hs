@@ -27,6 +27,7 @@ import Data.Char
 import Data.List
 
 import Scaff.Context
+import Scaff.Mapping
 
 loadYamlFile :: JSON.FromJSON a => FilePath -> IO a
 loadYamlFile fn =
@@ -116,4 +117,3 @@ findTemplateIn templateName (LocalRepo dirname) = do
     pure . Just $ templateDir
   else
     pure Nothing
-
