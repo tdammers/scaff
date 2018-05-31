@@ -34,11 +34,11 @@ gingerPure context src = do
     Right template ->
       return $ easyRender (toGVal context :: GVal RunPure) template
 
--- | Expand a Ginger template from a file, writing output into another file.
--- Includes are resolved relative to the CWD.
-gingerFileIO :: Context -> FilePath -> FilePath -> IO ()
-gingerFileIO context srcFn dstFn = do
-  parseGingerFile loadResolver srcFn >>= \case
+-- | Expand a Ginger template into a file.
+-- Includes are resolved according to the given resolver.
+gingerIO :: IncludeResolver IO -> Context -> FilePath -> FilePath -> IO ()
+gingerIO resolver context srcFn dstFn = do
+  parseGingerFile resolver srcFn >>= \case
     Left err ->
       hPutStrLn stderr . show $ err
     Right t -> do
@@ -49,6 +49,10 @@ gingerFileIO context srcFn dstFn = do
           Right _ ->
             pure ()
 
+-- | Expand a Ginger template from a file, writing output into another file.
+-- Includes are resolved relative to the CWD.
+gingerFileIO :: Context -> FilePath -> FilePath -> IO ()
+gingerFileIO = gingerIO loadResolver
 
 nullResolver :: Monad m => IncludeResolver m
 nullResolver = const . pure $ Nothing

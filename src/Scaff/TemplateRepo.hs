@@ -18,10 +18,10 @@ import System.IO.Error
 import Data.Char
 import Data.List
 
-data TemplateRepo
+data RepoRef
   = LocalRepo FilePath
 
-listRepos :: IO [TemplateRepo]
+listRepos :: IO [RepoRef]
 listRepos = do
   home <- getEnv "HOME"
   repoLists <- do
@@ -38,7 +38,7 @@ listRepos = do
 
   ((LocalRepo ".") :) . concat <$> mapM collectRepos repoLists
 
-collectRepos :: FilePath -> IO [TemplateRepo]
+collectRepos :: FilePath -> IO [RepoRef]
 collectRepos fn = do
   exists <- doesFileExist fn
   if exists then
@@ -46,7 +46,7 @@ collectRepos fn = do
   else do
     return []
 
-parseRepoLine :: String -> Maybe TemplateRepo
+parseRepoLine :: String -> Maybe RepoRef
 parseRepoLine str =
   case tyName of
     "local" -> Just (LocalRepo arg)
@@ -59,7 +59,28 @@ parseRepoLine str =
             . dropWhile (not . isSpace)
             $ strWithoutComments
 
-findTemplate :: String -> [TemplateRepo] -> IO (Maybe FilePath)
+data Template
+  =  Template
+      { readTemplateFile :: FilePath -> IO (Maybe String)
+      }
+
+readTemplateFileOrElse :: Template -> IO () -> FilePath -> IO String
+readTemplateFileOrElse tpl barf fn =
+  readTemplateFile tpl fn >>= maybe (barf >> return "") return
+
+fsTemplate :: FilePath -> Template
+fsTemplate templateDir =
+  Template
+    { readTemplateFile = \fn -> do
+        let fullPath = templateDir </> fn
+        exists <- doesFileExist fullPath
+        if exists then
+          Just <$> readFile fullPath
+        else
+          pure Nothing
+    }
+
+findTemplate :: String -> [RepoRef] -> IO (Maybe Template)
 findTemplate templateName [] = pure Nothing
 findTemplate templateName (repo:repos) = do
   foundMay <- findTemplateIn templateName repo
@@ -67,12 +88,12 @@ findTemplate templateName (repo:repos) = do
     Nothing -> findTemplate templateName repos
     x -> pure x
 
-findTemplateIn :: String -> TemplateRepo -> IO (Maybe FilePath)
+findTemplateIn :: String -> RepoRef -> IO (Maybe Template)
 findTemplateIn templateName (LocalRepo dirname) = do
   let templateDir = dirname </> templateName
       fullPath = templateDir </> "files"
   exists <- doesFileExist fullPath
   if exists then
-    pure . Just $ templateDir
+    pure . Just . fsTemplate $ templateDir
   else
     pure Nothing

@@ -9,7 +9,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.HashMap.Lazy (HashMap)
 import qualified Data.HashMap.Lazy as HashMap
-import Text.Ginger
 import Data.Aeson (Value (..))
 import System.FilePath
 import System.IO
@@ -20,7 +19,8 @@ import Control.Exception
 import Data.Char
 
 import Scaff.Context
-import Scaff.Ginger (gingerPure, gingerFileIO)
+import Scaff.Ginger (gingerIO, gingerPure)
+import Scaff.TemplateRepo
 
 data MappingOf a =
   Mapping
@@ -33,13 +33,14 @@ type Mapping = MappingOf FilePath
 
 type Mappings = [Mapping]
 
-runMapping :: FilePath -> Context -> Mapping -> IO ()
-runMapping templateRootDir context mapping = do
-  let srcFn = templateRootDir </> template mapping
+runMapping :: Template -> Context -> Mapping -> IO ()
+runMapping tpl context mapping = do
+  let srcFn = template mapping
       dstFn = path mapping
   printf "%s\n" dstFn
   createDirectoryIfMissing True (takeDirectory dstFn)
-  gingerFileIO context srcFn dstFn
+  let resolver fn = readTemplateFile tpl fn
+  gingerIO resolver context srcFn dstFn
 
 parseMapping :: String -> Maybe Mapping
 parseMapping input = do

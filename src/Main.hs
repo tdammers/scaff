@@ -39,14 +39,19 @@ main = do
   args <- getArgs
   (project, templateName, dstDir) <- parseArgs args
   config <- loadConfig
-  templateDir <- maybe (error $ "template not found: " ++ templateName) pure
-                  =<< findTemplate templateName (templateRepos config)
+  template <- maybe (error $ "template not found: " ++ templateName) pure
+               =<< findTemplate templateName (templateRepos config)
   context <- getContext project (configVars config)
-  let mappingFn = templateDir </> "files"
   mappings <- map (fmap (dstDir </>))
                 . catMaybes
                 . map parseMapping
                 . lines
                 . Text.unpack
-                <$> (gingerPure context =<< readFile mappingFn)
-  mapM_ (runMapping templateDir context) mappings
+                <$> ( gingerPure context
+                      =<<
+                      readTemplateFileOrElse
+                        template
+                        (error "Could not find template files listing")
+                        "files"
+                    )
+  mapM_ (runMapping template context) mappings

@@ -45,7 +45,7 @@ loadOptionalYamlFile def fn = do
 data Config
   = Config
       { configVars :: Context
-      , templateRepos :: [TemplateRepo]
+      , templateRepos :: [RepoRef]
       }
 
 loadConfig :: IO Config
