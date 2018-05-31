@@ -18,8 +18,11 @@ import System.IO.Error
 import Data.Char
 import Data.List
 
+import Scaff.HTTP
+
 data RepoRef
   = LocalRepo FilePath
+  | HttpRepo String
 
 listRepos :: IO [RepoRef]
 listRepos = do
@@ -53,6 +56,8 @@ parseRepoLine str =
   case tyName of
     "local" ->
       return $ Just (LocalRepo arg)
+    "http" ->
+      return $ Just (HttpRepo arg)
     "" ->
       return Nothing
     x -> do
@@ -87,6 +92,15 @@ fsTemplate templateDir =
           pure Nothing
     }
 
+httpTemplate :: String -> IO Template
+httpTemplate rootUrl = do
+  client <- mkHttpClient
+  return Template
+    { readTemplateFile = \fn -> do
+        let fullUrl = rootUrl ++ "/" ++ fn
+        readFileHttp client fullUrl
+    }
+
 findTemplate :: String -> [RepoRef] -> IO (Maybe Template)
 findTemplate templateName [] = pure Nothing
 findTemplate templateName (repo:repos) = do
@@ -102,5 +116,13 @@ findTemplateIn templateName (LocalRepo dirname) = do
   exists <- doesFileExist fullPath
   if exists then
     pure . Just . fsTemplate $ templateDir
+  else
+    pure Nothing
+findTemplateIn templateName (HttpRepo rootUrl) = do
+  let templateRootUrl = rootUrl ++ "/" ++ templateName
+  template <- httpTemplate templateRootUrl
+  filesBodyMay <- readTemplateFile template "files"
+  if isJust filesBodyMay then
+    pure . Just $ template
   else
     pure Nothing
