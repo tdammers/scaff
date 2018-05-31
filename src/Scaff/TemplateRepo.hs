@@ -42,17 +42,24 @@ collectRepos :: FilePath -> IO [RepoRef]
 collectRepos fn = do
   exists <- doesFileExist fn
   if exists then
-    catMaybes . map parseRepoLine . lines <$> readFile fn
+    fmap catMaybes . mapM parseRepoLine
+    =<<
+    (lines <$> readFile fn)
   else do
     return []
 
-parseRepoLine :: String -> Maybe RepoRef
+parseRepoLine :: String -> IO (Maybe RepoRef)
 parseRepoLine str =
   case tyName of
-    "local" -> Just (LocalRepo arg)
-    x -> Nothing
+    "local" ->
+      return $ Just (LocalRepo arg)
+    "" ->
+      return Nothing
+    x -> do
+      hPutStrLn stderr $ "Warning: unrecognized repository type '" ++ tyName ++ "'"
+      return Nothing
   where
-    strWithoutComments = takeWhile (/= '#') str
+    strWithoutComments = takeWhile (/= '#') . dropWhile isSpace $ str
     tyName = takeWhile (not . isSpace) strWithoutComments
     arg = dropWhileEnd isSpace
             . dropWhile isSpace
