@@ -41,7 +41,9 @@ askQuestions = fmap mconcat . mapM askQuestion
 askQuestion :: Question -> IO Context
 askQuestion (Question key question def) = do
   hPutStr stderr question
-  hPutStr stderr " "
+  hPutStr stderr "? "
+  when (def /= "") $
+    hPutStr stderr $ "(" ++ Text.unpack def ++ ") "
   hFlush stderr
   answer' <- getLine
   let answer = if answer' == "" then def else Text.pack answer'
