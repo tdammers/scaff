@@ -34,6 +34,7 @@ executable scaff
                , http-types
                , megaparsec
                , mtl
+               , split
                , text
                , unordered-containers
                , utf8-string

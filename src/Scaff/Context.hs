@@ -24,6 +24,9 @@ type Context = HashMap Text JSON.Value
 contextLookup :: Text -> Context -> JSON.Value
 contextLookup key context = fromMaybe JSON.Null $ HashMap.lookup key context
 
+contextSingleton :: JSON.ToJSON a => Text -> a -> Context
+contextSingleton k v = HashMap.singleton k (JSON.toJSON v)
+
 getContext :: String -> Context -> IO Context
 getContext project config = do
   environment <- map (\(k, v) -> (Text.pack k, toJSON v)) <$> getEnvironment

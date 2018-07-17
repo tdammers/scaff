@@ -14,9 +14,11 @@ import System.Directory
 import System.FilePath
 import System.IO
 import Control.Exception
+import Control.Monad
 import System.IO.Error
 import Data.Char
 import Data.List
+import Data.List.Split
 
 import Scaff.HTTP
 
@@ -76,9 +78,40 @@ data Template
       { readTemplateFile :: FilePath -> IO (Maybe String)
       }
 
+data Question
+  = Question
+      { questionVar :: Text
+      , questionPrompt :: String
+      , questionDefault :: Text
+      }
+
 readTemplateFileOrElse :: Template -> IO () -> FilePath -> IO String
 readTemplateFileOrElse tpl barf fn =
   readTemplateFile tpl fn >>= maybe (barf >> return "") return
+
+trim :: String -> String
+trim = dropWhileEnd isSpace . dropWhile isSpace
+
+readTemplateQuestions :: Template -> IO [Question]
+readTemplateQuestions tpl =
+  readTemplateFile tpl "questions" >>= maybe (return []) go
+  where
+    go str =
+      catMaybes <$> forM (lines str) (return . parseQuestion)
+      where
+        parseQuestion :: String -> Maybe Question
+        parseQuestion str = case map trim . splitOn ":" $ str of
+          [key, question] ->
+            go key question ""
+          [key, question, def] ->
+            go key question def
+          (key : question : def : _) -> do
+            go key question def
+          _ ->
+            Nothing
+
+        go key question def =
+          Just (Question (Text.pack key) question (Text.pack def))
 
 fsTemplate :: FilePath -> Template
 fsTemplate templateDir =

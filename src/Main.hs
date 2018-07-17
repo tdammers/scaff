@@ -9,6 +9,7 @@ import Control.Monad
 import Control.Applicative
 import System.FilePath
 import System.Environment
+import System.IO
 import qualified Data.ByteString as BS
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -34,6 +35,18 @@ parseArgs [fn, project] =
 parseArgs _ =
   error "Usage: scaff TEMPLATE PROJECT-NAME"
 
+askQuestions :: [Question] -> IO Context
+askQuestions = fmap mconcat . mapM askQuestion
+
+askQuestion :: Question -> IO Context
+askQuestion (Question key question def) = do
+  hPutStr stderr question
+  hPutStr stderr " "
+  hFlush stderr
+  answer' <- getLine
+  let answer = if answer' == "" then def else Text.pack answer'
+  return $ contextSingleton key answer
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -41,7 +54,9 @@ main = do
   config <- loadConfig
   template <- maybe (error $ "template not found: " ++ templateName) pure
                =<< findTemplate templateName (templateRepos config)
-  context <- getContext project (configVars config)
+  questions <- readTemplateQuestions template
+  extraVars <- askQuestions questions
+  context <- getContext project (configVars config <> extraVars)
   mappings <- map (fmap (dstDir </>))
                 . catMaybes
                 . map parseMapping
