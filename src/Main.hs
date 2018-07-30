@@ -10,6 +10,7 @@ import Control.Applicative
 import System.FilePath
 import System.Environment
 import System.IO
+import System.Exit
 import qualified Data.ByteString as BS
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -33,7 +34,7 @@ parseArgs [fn, project, dstDir] = do
 parseArgs [fn, project] =
   parseArgs [fn, project, "." </> project]
 parseArgs _ =
-  error "Usage: scaff TEMPLATE PROJECT-NAME"
+  die "Usage: scaff TEMPLATE PROJECT-NAME [OUTPUT-DIR]"
 
 askQuestions :: [Question] -> IO Context
 askQuestions = fmap mconcat . mapM askQuestion
@@ -54,7 +55,7 @@ main = do
   args <- getArgs
   (project, templateName, dstDir) <- parseArgs args
   config <- loadConfig
-  template <- maybe (error $ "template not found: " ++ templateName) pure
+  template <- maybe (die $ "Template not found: " ++ templateName) pure
                =<< findTemplate templateName (templateRepos config)
   questions <- readTemplateQuestions template
   extraVars <- askQuestions questions
@@ -68,7 +69,7 @@ main = do
                       =<<
                       readTemplateFileOrElse
                         template
-                        (error "Could not find template files listing")
+                        (die "Could not find template files listing")
                         "files"
                     )
   mapM_ (runMapping template context) mappings
