@@ -83,7 +83,16 @@ data Question
       { questionVar :: Text
       , questionPrompt :: String
       , questionDefault :: Text
+      , questionMode :: QuestionMode
       }
+      deriving (Show)
+
+data QuestionMode
+  = YesNoQuestion
+  | ScalarQuestion
+  | MultiQuestion
+  | MultipleChoiceQuestion [String]
+  deriving (Show)
 
 readTemplateFileOrElse :: Template -> IO () -> FilePath -> IO String
 readTemplateFileOrElse tpl barf fn =
@@ -102,16 +111,25 @@ readTemplateQuestions tpl =
         parseQuestion :: String -> Maybe Question
         parseQuestion str = case map trim . splitOn ":" $ str of
           [key, question] ->
-            go key question ""
-          [key, question, def] ->
-            go key question def
-          (key : question : def : _) -> do
-            go key question def
+            go key question "" ""
+          [key, question, def, modeStr] ->
+            go key question def modeStr
+          (key : question : def : modeStr : _) -> do
+            go key question def modeStr
           _ ->
             Nothing
 
-        go key question def =
-          Just (Question (Text.pack key) question (Text.pack def))
+        go key question def modeStr =
+          Just (Question (Text.pack key) question (Text.pack def) mode)
+          where
+            mode = case modeStr of
+              "" -> ScalarQuestion
+              "." -> ScalarQuestion
+              "*" -> MultiQuestion
+              "?" -> YesNoQuestion
+              str ->
+                let options = map trim . splitOn "," $ str
+                in MultipleChoiceQuestion options
 
 fsTemplate :: FilePath -> Template
 fsTemplate templateDir =

@@ -27,8 +27,8 @@ contextLookup key context = fromMaybe JSON.Null $ HashMap.lookup key context
 contextSingleton :: JSON.ToJSON a => Text -> a -> Context
 contextSingleton k v = HashMap.singleton k (JSON.toJSON v)
 
-getContext :: String -> Context -> IO Context
-getContext project config = do
+getContext :: String -> Context -> Context -> IO Context
+getContext project extraVars config = do
   environment <- map (\(k, v) -> (Text.pack k, toJSON v)) <$> getEnvironment
   let environmentAll =
         HashMap.fromList environment
@@ -44,4 +44,4 @@ getContext project config = do
              , ("env", toJSON environmentAll)
              , ("author", contextLookup "author" config)
              ]
-  return $ environmentOurs <> HashMap.fromList vars
+  return $ environmentOurs <> HashMap.fromList vars <> extraVars
