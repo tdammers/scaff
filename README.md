@@ -71,21 +71,41 @@ local /home/yourname/src/scaff/templates/
 You can add as many repositories you like; scaff will try them in order, until
 it finds the desired template.
 
+If you ever use more than one repository, then it is useful to name them. Names
+are arbitrary; they cannot contain spaces however, and they should be unique.
+Here's how that works:
+
+```
+tdammers http https://raw.githubusercontent.com/tdammers/scaff/master/templates/
+my-templates local /home/yourname/src/scaff/templates/
+```
+
 ## Usage
 
-The full CLI specification goes like this:
+### New Project:
+
+To create a new project based on a scaff template:
 
     scaff TEMPLATE PROJECT_NAME [OUTPUT_DIR]
 
 Where:
 
-- `TEMPLATE` is the project template you want to use
-- `PROJECT_NAME` is the name of your project
+- `TEMPLATE` is the project template you want to use; you can prepend a
+  repository name like so: `REPOSITORY:TEMPLATE`, to force getting the template
+  from the specified repository rather than trying the entire list in order.
+- `PROJECT_NAME` is the name of your project.
 - `OUTPUT_DIR` is the root directory for your project; if not given, the
-  project name is used, below the CWD
+  project name is used, below the CWD.
 
 Depending on the template being used, `scaff` may now ask you a number of
 questions, and then generate the project into `OUTPUT_DIR`.
+
+### List Templates:
+
+    scaff list
+
+This will spit out a list of template names with the repositories they come
+from.
 
 ## Authoring Templates
 
