@@ -22,6 +22,9 @@ import Data.List
 import Data.List.Split
 import System.FilePath.Glob (glob)
 import Debug.Trace
+import Data.Digest.Pure.SHA (sha1, showDigest)
+import qualified Data.ByteString.Lazy.UTF8 as LUTF8
+import Text.Printf (printf)
 
 import Scaff.HTTP
 
@@ -33,7 +36,7 @@ pprRepo :: RepoRef -> String
 pprRepo (HttpRepo url) = url
 pprRepo (LocalRepo dir) = dir
 
-listRepos :: IO [RepoRef]
+listRepos :: IO [(String, RepoRef)]
 listRepos = do
   home <- getEnv "HOME"
   repoLists <- do
@@ -50,7 +53,7 @@ listRepos = do
 
   concat <$> mapM collectRepos repoLists
 
-collectRepos :: FilePath -> IO [RepoRef]
+collectRepos :: FilePath -> IO [(String, RepoRef)]
 collectRepos fn = do
   exists <- doesFileExist fn
   if exists then
@@ -60,13 +63,13 @@ collectRepos fn = do
   else do
     return []
 
-parseRepoLine :: String -> IO (Maybe RepoRef)
+parseRepoLine :: String -> IO (Maybe (String, RepoRef))
 parseRepoLine str =
   case tyName of
     "local" ->
-      return $ Just (LocalRepo arg)
+      return $ Just (repoName, LocalRepo arg)
     "http" ->
-      return $ Just (HttpRepo arg)
+      return $ Just (repoName, HttpRepo arg)
     "" ->
       return Nothing
     x -> do
@@ -74,11 +77,12 @@ parseRepoLine str =
       return Nothing
   where
     strWithoutComments = takeWhile (/= '#') . dropWhile isSpace $ str
-    tyName = takeWhile (not . isSpace) strWithoutComments
-    arg = dropWhileEnd isSpace
-            . dropWhile isSpace
-            . dropWhile (not . isSpace)
-            $ strWithoutComments
+    parts = words strWithoutComments
+    (repoName, tyName, arg) = case parts of
+      [tyName, arg] -> (tyName ++ "-" ++ hash arg, tyName, arg)
+      [repoName, tyName, arg] -> (repoName, tyName, arg)
+      _ -> ("", "", "")
+    hash = take 6 . showDigest . sha1 . LUTF8.fromString
 
 data Template
   =  Template
@@ -173,13 +177,20 @@ removePrefix pf str
   | pf `isPrefixOf` str = drop (length pf) str
   | otherwise = str
 
-listAllTemplates :: [RepoRef] -> IO [(RepoRef, FilePath)]
+listAllTemplates :: [(String, RepoRef)] -> IO [(String, FilePath)]
 listAllTemplates repos =
-  concat <$> mapM (\repo -> map (repo,) . sort <$> listTemplates repo) repos
+  concat <$> mapM (\(repoName, repo) -> map (repoName,) . sort <$> listTemplates repo) repos
 
-findTemplate :: String -> [RepoRef] -> IO (Maybe Template)
+findTemplate :: String -> [(String, RepoRef)] -> IO (Maybe Template)
+findTemplate templateName repos | ':' `elem` templateName = do
+  let repoName = takeWhile (/= ':') templateName
+      templateName' = (drop 1 . dropWhile (/= ':')) templateName
+  printf "%s [%s]\n" templateName' repoName
+  case lookup repoName repos of
+    Nothing -> return Nothing
+    Just repo -> findTemplateIn templateName' repo
 findTemplate templateName [] = pure Nothing
-findTemplate templateName (repo:repos) = do
+findTemplate templateName ((repoName, repo):repos) = do
   foundMay <- findTemplateIn templateName repo
   case foundMay of
     Nothing -> findTemplate templateName repos

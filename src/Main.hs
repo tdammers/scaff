@@ -127,8 +127,10 @@ main = do
 listTemplatesCmd :: Config -> IO ()
 listTemplatesCmd config = do
   allTemplates <- listAllTemplates (templateRepos config)
+  let maxNameLen = maximum . map length . map snd $ allTemplates
+      fmtStr = "%-" ++ show maxNameLen ++ "s [%s]\n"
   forM_ allTemplates $ \(repo, template) -> do
-    printf "%+20s : %s\n" (pprRepo repo) template
+    printf fmtStr template repo
 
 run :: Config -> String -> String -> String -> IO ()
 run config project templateName dstDir = do
