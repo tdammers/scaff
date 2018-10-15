@@ -163,3 +163,26 @@ code files directly over HTTPS for public repos, so for example for github, you
 can do something like this in your `repos.list`:
 
     http https://raw.githubusercontent.com/yourname/scaff-templates/master/templates/
+
+You will also need to have a `templates.list` file directly under the root URL,
+which should list the available templates. E.g., if you have:
+
+    https://raw.githubusercontent.com/yourname/scaff-templates/foo/bar
+
+...then you need to have a file under this URL:
+
+    https://raw.githubusercontent.com/yourname/scaff-templates/templates.list
+
+...which contains the following line:
+
+    foo/bar
+
+This is a bit unfortunate, because we would much rather find templates
+automatically, but HTTP doesn't support this, and while many hosting options do
+offer directory listings of some sort, they are not standardized in any way, so
+there isn't a nice machine-friendly way of listing templates in a repository.
+
+Note, further, that while the `list` command will only list templates
+explicitly mentioned in `templates.list`, any other template below the root URL
+can still be accessed - `templates.list` is only used for discovery, it is by
+no means a security feature.

@@ -13,18 +13,25 @@ import Data.Maybe
 import System.Directory
 import System.FilePath
 import System.IO
+import System.Process
 import Control.Exception
 import Control.Monad
 import System.IO.Error
 import Data.Char
 import Data.List
 import Data.List.Split
+import System.FilePath.Glob (glob)
+import Debug.Trace
 
 import Scaff.HTTP
 
 data RepoRef
   = LocalRepo FilePath
   | HttpRepo String
+
+pprRepo :: RepoRef -> String
+pprRepo (HttpRepo url) = url
+pprRepo (LocalRepo dir) = dir
 
 listRepos :: IO [RepoRef]
 listRepos = do
@@ -41,7 +48,7 @@ listRepos = do
       )
     return $ mainRepoFile:otherRepoFiles
 
-  ((LocalRepo ".") :) . concat <$> mapM collectRepos repoLists
+  concat <$> mapM collectRepos repoLists
 
 collectRepos :: FilePath -> IO [RepoRef]
 collectRepos fn = do
@@ -152,6 +159,24 @@ httpTemplate rootUrl = do
         readFileHttp client fullUrl
     }
 
+listTemplates :: RepoRef -> IO [FilePath]
+listTemplates (HttpRepo rootUrl) = do
+  client <- mkHttpClient
+  let fullUrl = rootUrl ++ "/templates.list"
+  maybe [] lines <$> readFileHttp client fullUrl
+
+listTemplates (LocalRepo templateDir) = do
+  map (removePrefix templateDir . takeDirectory) <$> glob (templateDir </> "**" </> "files")
+
+removePrefix :: String -> String -> String
+removePrefix pf str
+  | pf `isPrefixOf` str = drop (length pf) str
+  | otherwise = str
+
+listAllTemplates :: [RepoRef] -> IO [(RepoRef, FilePath)]
+listAllTemplates repos =
+  concat <$> mapM (\repo -> map (repo,) . sort <$> listTemplates repo) repos
+
 findTemplate :: String -> [RepoRef] -> IO (Maybe Template)
 findTemplate templateName [] = pure Nothing
 findTemplate templateName (repo:repos) = do
@@ -177,3 +202,4 @@ findTemplateIn templateName (HttpRepo rootUrl) = do
     pure . Just $ template
   else
     pure Nothing
+

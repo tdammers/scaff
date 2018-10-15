@@ -30,9 +30,18 @@ import Scaff.TemplateRepo
 import Scaff.Mapping
 import Scaff.Ginger
 
-parseArgs :: [String] -> IO (String, String, String)
+data MainCommand
+  = RunCmd
+      String -- ^ template filename
+      String -- ^ project name
+      String -- ^ destination dir
+  | ListCmd
+
+parseArgs :: [String] -> IO MainCommand
+parseArgs ("list":_) = do
+  return ListCmd
 parseArgs [fn, project, dstDir] = do
-  return (project, fn, dstDir)
+  return $ RunCmd project fn dstDir
 parseArgs [fn, project] =
   parseArgs [fn, project, "." </> project]
 parseArgs _ =
@@ -109,8 +118,20 @@ at1 (_:xs) n = at1 xs (pred n)
 main :: IO ()
 main = do
   args <- getArgs
-  (project, templateName, dstDir) <- parseArgs args
+  cmd <- parseArgs args
   config <- loadConfig
+  case cmd of
+    ListCmd -> listTemplatesCmd config
+    RunCmd project templateName dstDir -> run config project templateName dstDir
+
+listTemplatesCmd :: Config -> IO ()
+listTemplatesCmd config = do
+  allTemplates <- listAllTemplates (templateRepos config)
+  forM_ allTemplates $ \(repo, template) -> do
+    printf "%+20s : %s\n" (pprRepo repo) template
+
+run :: Config -> String -> String -> String -> IO ()
+run config project templateName dstDir = do
   template <- maybe (die $ "Template not found: " ++ templateName) pure
                =<< findTemplate templateName (templateRepos config)
   questions <- readTemplateQuestions template
